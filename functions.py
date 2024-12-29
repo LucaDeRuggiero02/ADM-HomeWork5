@@ -746,3 +746,488 @@ def add_routes_to_map(usa_map, routes_df, airports_df):
             ).add_to(usa_map)
     
     return usa_map
+
+
+# [Q1]
+
+# 1.1
+
+def nodes(flight_network):
+    origin_air = set(flight_network['Origin_airport'])
+    dest_air = set(flight_network['Destination_airport'])
+    nodes = origin_air.union(dest_air)
+    num_nodes = len(nodes)
+    return num_nodes
+
+def edges(flight_network):
+    edges = flight_network.groupby(['Origin_airport', 'Destination_airport']).size()
+    num_edges = len(edges)
+    return num_edges
+
+def density(num_nodes, num_edges):
+    if num_nodes > 1:
+        density = 2*(num_edges) / (num_nodes * (num_nodes - 1))
+    else:
+        density = 0
+    return density
+
+def calculate_degrees(flight_network):
+    in_degree = {}
+    out_degree = {}
+    
+    for _, row in flight_network.iterrows():
+        origin = row['Origin_airport']
+        destination = row['Destination_airport']
+        
+        # Increases out_degree for the origin airport
+        if origin not in out_degree:
+            out_degree[origin] = 0
+        out_degree[origin] += 1
+        
+        # Increases in_degree for the destination airport
+        if destination not in in_degree:
+            in_degree[destination] = 0
+        in_degree[destination] += 1
+    
+    return in_degree, out_degree
+
+def identify_hubs(in_degree, out_degree):
+    # Calculate the total degree for each node
+    total_degree = {node: in_degree.get(node, 0) + out_degree.get(node, 0) for node in set(in_degree) | set(out_degree)}
+    
+    # Calculate the 90% percentile of the total degree values
+    degree_values = list(total_degree.values())
+    threshold = np.percentile(degree_values, 90)
+    
+    # Identify the hubs
+    hubs = {node: degree for node, degree in total_degree.items() if degree > threshold}
+    return hubs
+
+def is_dense(density):
+    return density >= 0.5
+
+# Final Function to analyze the graph features
+def analyze_graph_features(flight_network):
+
+    num_nodes = nodes(flight_network)
+
+    num_edges = edges(flight_network)
+
+    graph_density = density(num_nodes, num_edges)
+
+    in_degree, out_degree = calculate_degrees(flight_network)
+
+    hubs = identify_hubs(in_degree, out_degree)
+
+    graph_type = "Dense" if is_dense(graph_density) else "Sparse"
+    
+    return {
+        "num_nodes": num_nodes,
+        "num_edges": num_edges,
+        "density": graph_density,
+        "graph_type": graph_type,
+        "hubs": hubs,
+        "in_degree": in_degree,
+        "out_degree": out_degree
+    }
+
+# 1.2 
+
+def summarize_graph_features(flight_network):
+
+    # Step 1: Compute the number of nodes and edges
+
+    num_nodes = nodes(flight_network)
+    num_edges = edges(flight_network)
+    
+    # Step 2: Calculate the graph density
+
+    graph_density = density(num_nodes, num_edges)
+    
+    # Step 3: Compute in-degree and out-degree
+
+    in_degree, out_degree = calculate_degrees(flight_network)
+    
+    # Step 4: Identify hubs
+
+    hubs = identify_hubs(in_degree, out_degree)
+    
+    # Step 5: Generate degree distribution plots
+
+    # Convert in-degree and out-degree dictionaries to lists
+    in_degree_values = list(in_degree.values())
+    out_degree_values = list(out_degree.values())
+    
+    # Create subplots for the distributions
+    plt.figure(figsize=(12, 6))
+    
+    # In-degree distribution
+    plt.subplot(1, 2, 1)
+    plt.hist(in_degree_values, bins=50, color='skyblue', alpha=0.7, )
+    plt.title('In-Degree Distribution')
+    plt.xlabel('In-Degree')
+    plt.ylabel('Frequency')
+    plt.xlim(0, 50000)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Out-degree distribution
+    plt.subplot(1, 2, 2)
+    plt.hist(out_degree_values, bins=50, color='salmon', alpha=0.7)
+    plt.title('Out-Degree Distribution')
+    plt.xlabel('Out-Degree')
+    plt.ylabel('Frequency')
+    plt.xlim(0, 50000)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout and show the plots
+    plt.tight_layout()
+    plt.show()
+    
+    # Step 6: Display the hubs as a DataFrame
+    
+    hubs_df = pd.DataFrame(list(hubs.items()), columns=['Airport', 'Degree'])
+    hubs_df = hubs_df.sort_values(by='Degree', ascending=False)
+    
+    # Print the summary report
+    print("----- Graph Summary Report -----")
+    print(f"Number of nodes (airports): {num_nodes}")
+    print(f"Number of edges (routes): {num_edges}")
+    print(f"Graph density: {graph_density:.4f}")
+    print(f"Graph type: {'Dense' if graph_density >= 0.5 else 'Sparse'}")
+    
+    # Display the hubs table using IPython's display function
+    print("\n--- Hubs Table (Top 10 Hubs) ---")
+    display(hubs_df.head(10))
+    
+    # Return the detailed summary as a dictionary
+    return {
+        "num_nodes": num_nodes,
+        "num_edges": num_edges,
+        "density": graph_density,
+        "graph_type": "Dense" if graph_density >= 0.5 else "Sparse",
+        "hubs": hubs_df
+    }
+
+    
+    
+# 1.3
+
+def compute_passenger_flow(flight_network):
+    passenger_flow = flight_network.groupby(['Origin_city', 'Destination_city'])['Passengers'].sum().reset_index()
+    passenger_flow = passenger_flow.sort_values(by='Passengers', ascending=False)
+    return passenger_flow
+
+def visualize_busiest_routes(passenger_flow, top_n=10):
+    top_routes = passenger_flow.head(top_n)
+    plt.figure(figsize=(12, 6))
+    plt.barh(top_routes['Origin_city'] + " → " + top_routes['Destination_city'], top_routes['Passengers'], color='skyblue', edgecolor='black')
+    plt.xlabel('Total Passengers')
+    plt.ylabel('Routes')
+    plt.title(f'Top {top_n} Busiest Routes by Passenger Traffic')
+    plt.gca().invert_yaxis()  # Invert y-axis for better readability
+    plt.show()
+
+def analyze_route_utilization(flight_network):
+    route_stats = flight_network.groupby(['Origin_city', 'Destination_city']).agg(
+        total_passengers=('Passengers', 'sum'),
+        total_flights=('Flights', 'sum'),
+        total_seats=('Seats', 'sum')
+    ).reset_index()
+    
+    # Calculate averages
+    route_stats['avg_passengers_per_flight'] = route_stats['total_passengers'] / route_stats['total_flights']
+    route_stats['avg_seat_capacity'] = route_stats['total_seats'] / route_stats['total_flights']
+    
+    # Determine under/over-utilized routes
+    route_stats['utilization'] = route_stats['avg_passengers_per_flight'] / route_stats['avg_seat_capacity']
+    route_stats['utilization_status'] = route_stats['utilization'].apply(
+        lambda x: 'Under-utilized' if x < 0.5 else 'Over-utilized' if x > 1 else 'Well-utilized'
+    )
+
+    # fill na values
+    route_stats.fillna(0, inplace=True)
+    
+    return route_stats
+
+
+import folium
+from folium.plugins import MarkerCluster
+
+def plot_flight_network(df):
+    """
+    Visualize the flight network on a map using Folium.
+    Parameters:
+        df: DataFrame containing the flight network data with the following columns:
+            - Org_airport_lat, Org_airport_long 
+            - Dest_airport_lat, Dest_airport_long 
+            - Origin_airport, Destination_airport 
+    """
+    # Calculate the average latitude and longitude
+    avg_lat = (df['Org_airport_lat'].mean() + df['Dest_airport_lat'].mean()) / 2
+    avg_lon = (df['Org_airport_long'].mean() + df['Dest_airport_long'].mean()) / 2
+
+    # Creating the Folium Map
+    m = folium.Map(location=[avg_lat, avg_lon], zoom_start=5, tiles="OpenStreetMap")
+
+    # Grouping of the markers to avoid overcrowding on the map
+    marker_cluster = MarkerCluster().add_to(m)
+
+    # Add nodes (airports) as markers
+    for _, row in df.iterrows():
+        folium.Marker(
+            location=[row['Org_airport_lat'], row['Org_airport_long']],
+            popup=f"Origin: {row['Origin_airport']}",
+            icon=folium.Icon(color="blue", icon="plane", prefix="fa")
+        ).add_to(marker_cluster)
+
+        folium.Marker(
+            location=[row['Dest_airport_lat'], row['Dest_airport_long']],
+            popup=f"Destination: {row['Destination_airport']}",
+            icon=folium.Icon(color="red", icon="plane", prefix="fa")
+        ).add_to(marker_cluster)
+
+    # Add edges (routes) as lines
+    for _, row in df.iterrows():
+        folium.PolyLine(
+            locations=[
+                [row['Org_airport_lat'], row['Org_airport_long']],
+                [row['Dest_airport_lat'], row['Dest_airport_long']]
+            ],
+            color="blue",
+            weight=1,
+            opacity=0.7,
+            tooltip=f"Route: {row['Origin_airport']} → {row['Destination_airport']}"
+        ).add_to(m)
+
+    return m
+
+
+# [Q4]
+
+# TEST WITH NOT WEIGHTED GRAPH
+
+# function to create a graph from the flight network data (this time is a not weighted graph)
+def build_graph(flight_network):
+    graph = {}
+    
+    for _, row in flight_network.iterrows():
+        origin = row['Origin_airport']
+        destination = row['Destination_airport']
+        
+        # Add edges to the graph
+        if origin not in graph:
+            graph[origin] = set()
+        if destination not in graph:
+            graph[destination] = set()
+        
+        graph[origin].add(destination)
+        graph[destination].add(origin)
+    
+    return graph
+
+from collections import deque
+
+def bfs(graph, source, sink, parent):
+    visited = {node: False for node in graph}
+    queue = deque([source])
+    visited[source] = True
+
+    while queue:
+        node = queue.popleft()
+        for neighbor in graph[node]:
+            if not visited[neighbor]:
+                queue.append(neighbor)
+                visited[neighbor] = True
+                parent[neighbor] = node
+                if neighbor == sink:
+                    return True
+    return False
+
+def min_cut(graph, source, sink):
+    parent = {}
+    residual_graph = {u: set(v) for u, v in graph.items()}
+    
+    # Ford-Fulkerson for maximum flow
+    while bfs(residual_graph, source, sink, parent):
+        v = sink
+        while v != source:
+            u = parent[v]
+            residual_graph[u].remove(v)
+            residual_graph[v].add(u)  # Reverse edge
+            v = u
+    
+    # Find the nodes reachable from the source
+    visited = set()
+    queue = deque([source])
+    while queue:
+        node = queue.popleft()
+        visited.add(node)
+        for neighbor in residual_graph[node]:
+            if neighbor not in visited:
+                queue.append(neighbor)
+    
+    # Edge which connect visited to non-visited
+    cut_edges = []
+    for u in visited:
+        for v in graph[u]:
+            if v not in visited:
+                cut_edges.append((u, v))
+    
+    return cut_edges
+
+def select_source_and_sink(flight_network):
+    # Calculate total degree (in-degree + out-degree) for each airport
+    degrees = {}
+    for _, row in flight_network.iterrows():
+        origin = row['Origin_airport']
+        destination = row['Destination_airport']
+        
+        degrees[origin] = degrees.get(origin, 0) + 1
+        degrees[destination] = degrees.get(destination, 0) + 1
+    
+    # sort airports by their degrees
+    sorted_degrees = sorted(degrees.items(), key=lambda x: x[1], reverse=True)
+    
+    # take the two nodes with highest degree as source e sink
+    source = sorted_degrees[0][0]  # Nodo con il grado massimo
+    sink = sorted_degrees[1][0]    # Nodo con il secondo grado massimo
+    
+    return source, sink
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+def visualize_graph(graph, removed_edges=None, title="Flight Network"):
+    G = nx.Graph()
+    for node, neighbors in graph.items():
+        for neighbor in neighbors:
+            G.add_edge(node, neighbor)
+    
+    if removed_edges:
+        G.remove_edges_from(removed_edges)
+    
+    plt.figure(figsize=(12, 8))
+    nx.draw(G, with_labels=True, node_color='skyblue', edge_color='gray', node_size=500, font_size=8)
+    plt.title(title)
+    plt.show()
+
+# TEST WITH WEIGHTED GRAPH
+    
+def build_weighted_graph(flight_network, weight_column='Passengers'):
+    graph = {}
+    for _, row in flight_network.iterrows():
+        origin = row['Origin_airport']
+        destination = row['Destination_airport']
+        weight = row[weight_column]
+        
+        if weight > 0:  # Exclude edges with zero weight
+            if origin not in graph:
+                graph[origin] = {}
+            if destination not in graph:
+                graph[destination] = {}
+            
+            # Add the weighted edge
+            graph[origin][destination] = weight
+            graph[destination][origin] = weight  # non-directional graph
+    
+    return graph
+
+from collections import deque
+
+def bfs_capacity(graph, source, sink, parent):
+    visited = {node: False for node in graph}
+    queue = deque([source])
+    visited[source] = True
+    
+    while queue:
+        node = queue.popleft()
+        for neighbor, capacity in graph[node].items():
+            if not visited[neighbor] and capacity > 0:  # Consider only edges with positive capacity
+                parent[neighbor] = node
+                if neighbor == sink:
+                    return True
+                queue.append(neighbor)
+                visited[neighbor] = True
+    return False
+
+def ford_fulkerson(graph, source, sink):
+    parent = {}
+    residual_graph = {u: dict(v) for u, v in graph.items()}
+    max_flow = 0
+    
+    # Ford-Fulkerson with BFS
+    while bfs_capacity(residual_graph, source, sink, parent):
+        path_flow = float('Inf')
+        v = sink
+        while v != source:
+            u = parent[v]
+            path_flow = min(path_flow, residual_graph[u][v])
+            v = u
+        
+        # Update residual graph
+        v = sink
+        while v != source:
+            u = parent[v]
+            residual_graph[u][v] -= path_flow
+            residual_graph[v][u] += path_flow
+            v = u
+        
+        max_flow += path_flow
+    
+    # Identify the minimum cut
+    visited = set()
+    queue = deque([source])
+    while queue:
+        node = queue.popleft()
+        visited.add(node)
+        for neighbor, capacity in residual_graph[node].items():
+            if neighbor not in visited and capacity > 0:
+                queue.append(neighbor)
+    
+    # Edges which forms the minimum cut
+    min_cut_edges = []
+    for u in visited:
+        for v, capacity in graph[u].items():
+            if v not in visited and capacity > 0:
+                min_cut_edges.append((u, v, capacity))
+    
+    return max_flow, min_cut_edges
+
+import networkx as nx
+import matplotlib.pyplot as plt
+
+def visualize_weighted_graph(graph, cut_edges=None, title="Weighted Flight Network"):
+    G = nx.Graph()
+    for node, neighbors in graph.items():
+        for neighbor, weight in neighbors.items():
+            G.add_edge(node, neighbor, weight=weight)
+    
+    # Remove the cut edges to visualize the disconnected graph
+    if cut_edges:
+        G.remove_edges_from([(u, v) for u, v, _ in cut_edges])
+    
+    pos = nx.spring_layout(G)
+    edge_labels = {(u, v): f"{d['weight']:.0f}" for u, v, d in G.edges(data=True)}
+    
+    plt.figure(figsize=(12, 8))
+    nx.draw(G, pos, with_labels=True, node_color='skyblue', edge_color='gray', node_size=500, font_size=8)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    plt.title(title)
+    plt.show()
+
+def select_source_and_sink_weighted(graph):
+    """
+    Select automatically the source and sink based on the sum of edge weights.
+    """
+    node_weights = {node: sum(neighbors.values()) for node, neighbors in graph.items()}
+    
+    # Sort nodes by their weights
+    sorted_nodes = sorted(node_weights.items(), key=lambda x: x[1], reverse=True)
+    
+    # Take the two nodes with the highest weights as source and sink
+    source = sorted_nodes[0][0]
+    sink = sorted_nodes[1][0]  # the second highest weight
+    
+    return source, sink
+
+    
