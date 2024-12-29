@@ -66,6 +66,9 @@ Arya needs to travel between cities using a network of flights. Each flight has 
   
 Given a graph of cities connected by flights, our job was to find the minimum cost for Arya to travel between two specified cities (src to dst) while following the constraints.
 
+## Google Colab Viewer
+
+In case of difficulties viewing the rendered outputs and graphs on the merged_notebook.ipynb file, we provide this link: [merged_notebook.ipynb](https://colab.research.google.com/drive/148AIps5ENUIE7BEkTKiPdnFpKHLtbe6T?usp=sharing) to be able to view everything.
 
 ## Structure of the Repository
 
