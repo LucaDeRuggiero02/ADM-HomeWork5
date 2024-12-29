@@ -9,7 +9,7 @@ Air travel connects cities across the United States, forming a dense and dynamic
 
 The dataset contains information about flights between airports in the United States. You can download and explore the dataset from this link: <https://www.kaggle.com/datasets/flashgordon/usa-airport-dataset> . In this task, we will analyze the basic features of the flight network graph, such as its size, density, and degree distribution.
 
-IMPORTANT: we can use packages like NetworkX or similar tools solely for handling the data structure. However, when implementing the algorithm for your functionalities, we must write it entirely from scratch without relying on pre-implemented functions from libraries that perform any steps on our behalf.
+**IMPORTANT**: we can use packages like **NetworkX** or similar tools solely for handling the data structure. However, when implementing the algorithm for your functionalities, we must write it entirely **from scratch** without relying on pre-implemented functions from libraries that perform any steps on our behalf.
 
 ### [Q1]
 
