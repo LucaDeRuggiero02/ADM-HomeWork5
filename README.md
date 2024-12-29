@@ -67,6 +67,16 @@ Arya needs to travel between cities using a network of flights. Each flight has 
 Given a graph of cities connected by flights, our job was to find the minimum cost for Arya to travel between two specified cities (src to dst) while following the constraints.
 
 
+## Structure of the Repository
 
+The repository contains different files, such as:
 
+- LICENSE
+- README (this file)
+- functions.py (file containing some functions used during the homework 5)
+- merged_notebook.ipynb (notebook where you can find all the questions done together in a unique place)
+- pic1.png / pic2.png / pic3.png (in case you can't open the fle named top_routes_map.html)
+- top_routes_map.html
+- usa_airports_map_with_routes.html
+- usa_airports_map_with_routes.png (in case you can't open the fle named usa_airports_map_with_routes.html)
 
